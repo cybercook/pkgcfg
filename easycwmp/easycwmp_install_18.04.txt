@@ -1,0 +1,110 @@
+USER=user
+GROUP=user
+
+sudo mkdir -p /opt/{dev,git}
+sudo chown -R $USER:$GROUP /opt/{dev,git}
+
+
+# json-c
+git clone git://github.com/json-c/json-c.git /opt/git/json-c ; cd /opt/git/json-c/
+
+git checkout json-c-0.13-20171207
+autoreconf -i
+./configure  --prefix=/usr && make && sudo make install
+sudo ln -sf /usr/include/json-c /usr/include/json
+
+
+#libubox
+git clone git://nbd.name/luci2/libubox.git /opt/git/libubox ; cd /opt/git/libubox/
+cmake CMakeLists.txt -DBUILD_LUA=OFF
+
+add #define is_error(ptr) (ptr == NULL) into blobmsg_json.c and jshn.c
+
+make  &&   sudo make install
+
+sudo ln -sf  /usr/local/lib/libubox.so  /usr/lib/libubox.so
+sudo mkdir /usr/share/libubox
+sudo ln -sf /usr/local/share/libubox/jshn.sh /usr/share/libubox/jshn.sh
+
+#uci 
+git clone git://nbd.name/uci.git /opt/git/uci ; cd /opt/git/uci//uci/
+cmake CMakeLists.txt -DBUILD_LUA=OFF
+make 
+class="western"
+sudo make install
+
+sudo ln -sf /usr/local/bin/uci /sbin/uci
+sudo ln -sf /usr/local/lib/libuci.so /usr/lib/libuci.so
+
+
+#ubus 
+git clone git://nbd.name/luci2/ubus.git /opt/git/ubus ; cd /opt/git/ubus
+cmake CMakeLists.txt -DBUILD_LUA=OFF
+make 
+sudo make install
+sudo ln -sf /usr/local/sbin/ubusd /usr/sbin/ubusd
+sudo ln -sf /usr/local/lib/libubus.so /usr/lib/libubus.so
+
+
+#microxml
+
+git clone https://github.com/pivasoftware/microxml.git /opt/git/microxml ; cd /opt/git/microxml/
+
+autoconf -i 
+./configure --prefix=/usr --enable-threads --enable-shared --enable-static
+make && sudo make install
+sudo ln -sf /usr/lib/libmicroxml.so.1.0 /lib/libmicroxml.so
+sudo ln -sf /usr/lib/libmicroxml.so.1.0 /lib/libmicroxml.so.1
+
+#easycwmp
+cd /opt/dev/
+wget http://easycwmp.org/download/easycwmp-1.8.6.tar.gz
+tar xvf easycwmp-1.8.6.tar.gz
+mv easycwmp-1.8.6 easycwmp
+
+autoreconf -i
+./configure --enable-debug --enable-devel --enable-acs=multi --enable-jsonc=1
+sudo apt install libssl-dev
+sudo apt install pkg-config
+autoreconf -i
+./configure --enable-debug --enable-devel --enable-acs=multi --enable-jsonc=1
+
+
+# configure
+cd /opt/dev/easycwmp/ ; sudo mkdir -p /usr/share/easycwmp/functions
+sudo mkdir -p /etc/easycwmp
+
+sudo ln -sf /opt/dev/easycwmp/ext/openwrt/scripts/easycwmp.sh /usr/sbin/easycwmp
+sudo ln -sf /opt/dev/easycwmp/ext/openwrt/scripts/defaults /usr/share/easycwmp/defaults
+sudo ln -sf /opt/dev/easycwmp/ext/openwrt/scripts/functions/common/common /usr/share/easycwmp/functions/common
+sudo ln -sf /opt/dev/easycwmp/ext/openwrt/scripts/functions/common/device_info /usr/share/easycwmp/functions/device_info
+sudo ln -sf /opt/dev/easycwmp/ext/openwrt/scripts/functions/common/management_server /usr/share/easycwmp/functions/management_server
+sudo ln -sf /opt/dev/easycwmp/ext/openwrt/scripts/functions/common/ipping_launch /usr/share/easycwmp/functions/ipping_launch
+sudo ln -sf /opt/dev/easycwmp/ext/openwrt/scripts/functions/tr181/root /usr/share/easycwmp/functions/root
+sudo ln -sf /opt/dev/easycwmp/ext/openwrt/scripts/functions/tr181/ip /usr/share/easycwmp/functions/ip
+sudo ln -sf /opt/dev/easycwmp/ext/openwrt/scripts/functions/tr181/ipping_diagnostic /usr/share/easycwmp/functions/ipping_diagnostic
+
+
+chmod +x /opt/dev/easycwmp/ext/openwrt/scripts/functions/*
+sudo mkdir /etc/config
+sudo ln -sf /opt/dev/easycwmp/ext/openwrt/config/easycwmp /etc/config/easycwmp
+sudo ln -sf /opt/dev/easycwmp/bin/easycwmpd /usr/sbin/easycwmpd
+
+
+export UCI_CONFIG_DIR="/opt/dev/easycwmp/ext/openwrt/config/"
+export UBUS_SOCKET="/var/run/ubus.sock"
+
+sudo mkdir -p /lib/{config,functions}
+sudo wget http://pastebin.lukaperkov.net/openwrt/20121219_lib_functions.sh -O /lib/functions.sh
+sudo wget http://pastebin.lukaperkov.net/openwrt/20121219_lib_config_uci.sh -O /lib/config/uci.sh
+sudo wget http://pastebin.lukaperkov.net/openwrt/20121219_lib_functions_network.sh -O /lib/functions/network.sh
+
+easycwmp get value Device.
+
+
+sudo /usr/sbin/easycwmpd -f -b &
+
+sudo /usr/sbin/ubusd -s /var/run/ubus.sock &
+sudo ln -sf /usr/local/lib/libblobmsg_json.so /usr/lib/libblobmsg_json.so
+ubus call tr069 notify
+
